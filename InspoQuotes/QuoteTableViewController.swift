@@ -7,9 +7,10 @@
 //
 
 import UIKit
+import StoreKit
 
-class QuoteTableViewController: UITableViewController {
-    
+class QuoteTableViewController: UITableViewController, SKPaymentTransactionObserver {
+    let productID = "com.SandiMa.InspoQuotes.PremiumQuotes"
     var quotesToShow = [
         "Our greatest glory is not in never falling, but in rising every time we fall. — Confucius",
         "All our dreams can come true, if we have the courage to pursue them. – Walt Disney",
@@ -30,25 +31,25 @@ class QuoteTableViewController: UITableViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-
+        SKPaymentQueue.default().add(self) // when you are adding a new protocol "SKPaymentTransactionObserver" and adding a new delegate method, you have to declare a class as the new delegate--we can set ourselves as the delegate-- any changes--it will contact the QuoteTableViewController -and wil trigger the paymentQueue method
     }
 
     // MARK: - Table view data source
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         //  return the number of rows
-        return quotesToShow.count + 1 // adding one more line to account for "Get More Quote" at the end
+        return quotesToShow.count + 1 // adding one more cell to account for "Get More Quote" at the end
     }
 
 
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "QuoteCell", for: indexPath)
-        // populate/configure the cells to render the existing 6 cells of quotes
+        // populate/configure the cells to render the existing 6 cells of quotes (index 0--> 5, count = 6)
         if indexPath.row < quotesToShow.count {
             cell.textLabel?.text = quotesToShow[indexPath.row]
             cell.textLabel?.numberOfLines = 0 // prevents the content from being cut off
         } else {
-            cell.textLabel?.text = "Get More Quotes"
+            cell.textLabel?.text = "Get More Quotes" // on quotesToShow.count = 6, this is our BUY button
             cell.textLabel?.textColor = #colorLiteral(red: 0.2392156869, green: 0.6745098233, blue: 0.9686274529, alpha: 1)
             cell.accessoryType = .disclosureIndicator
             
@@ -57,9 +58,39 @@ class QuoteTableViewController: UITableViewController {
     }
 
      // MARK: - Table view delegate source
-    override func tableView(_ tableView: UITableView, didDeselectRowAt indexPath: IndexPath) {
+ 
+    override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         if indexPath.row == quotesToShow.count {
-            print("Buy Quotes Clicked" )
+            buyPremiumQuotes()
+            print("Clicked on Buy More Quotes")
+        }
+        tableView.deselectRow(at: indexPath, animated: true)
+    }
+
+    
+    // MARK: In-App Purchase Methods
+    func buyPremiumQuotes() {
+        // check to make sure they can make purchases (no parental controls)
+        if SKPaymentQueue.canMakePayments() {
+        // can make payments
+        let paymentRequest = SKMutablePayment()
+            paymentRequest.productIdentifier = productID
+            SKPaymentQueue.default().add(paymentRequest)
+        } else {
+        // can't make payments
+        print("User can't make payments")
+        }
+    }
+    
+    func paymentQueue(_ queue: SKPaymentQueue, updatedTransactions transactions: [SKPaymentTransaction]) {
+        for transaction in transactions {
+            if transaction.transactionState == .purchased {
+            //User payment successful
+                print("Transaction successful")
+            } else if transaction.transactionState == .failed {
+                //Payment failed
+                print("Transaction failed")
+            }
         }
     }
     @IBAction func restorePressed(_ sender: UIBarButtonItem) {
