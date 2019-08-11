@@ -10,6 +10,8 @@ import UIKit
 import StoreKit
 
 class QuoteTableViewController: UITableViewController, SKPaymentTransactionObserver {
+
+    
     let productID = "com.SandiMa.InspoQuotes.PremiumQuotes"
     var quotesToShow = [
         "Our greatest glory is not in never falling, but in rising every time we fall. — Confucius",
@@ -41,7 +43,7 @@ class QuoteTableViewController: UITableViewController, SKPaymentTransactionObser
     // MARK: - Table view data source
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        //  return the number of rows
+        //  return the number of rows that corresponds to whether they have purchased or not yet purchased the additional quotes
         if isPurchased() {
             return quotesToShow.count
         } else {
@@ -99,20 +101,28 @@ class QuoteTableViewController: UITableViewController, SKPaymentTransactionObser
             //User payment successful
                 print("Transaction successful")
                 showPremiumQuotes()
-                UserDefaults.standard.set(true, forKey: productID)
                 SKPaymentQueue.default().finishTransaction(transaction)
             } else if transaction.transactionState == .failed {
                 //Payment failed
-      
+                // use optional binding
                 if let error = transaction.error {
                     let errorDescription = error.localizedDescription
                     print("Transaction failed due to error: \(errorDescription)")
                 }
+                 SKPaymentQueue.default().finishTransaction(transaction)
+            } else if transaction.transactionState == .restored {
+                showPremiumQuotes()
+                // once data is restored, we want to get rid of that button on the screen
+                navigationItem.setRightBarButton(nil, animated: true)
+                print("Transacton restored")
+                SKPaymentQueue.default().finishTransaction(transaction)
             }
         }
     }
     
     func showPremiumQuotes(){
+        // we want to check to see if the user purchased the product, so we do this by tapping into the productID
+        UserDefaults.standard.set(true, forKey: productID)
         quotesToShow.append(contentsOf: premiumQuotes)
         tableView.reloadData()
     }
@@ -128,9 +138,10 @@ class QuoteTableViewController: UITableViewController, SKPaymentTransactionObser
         }
         
     }
-    
+    // this allows users to restore their settings on their app when they update to a different OS or to a different phone.
     @IBAction func restorePressed(_ sender: UIBarButtonItem) {
-        
+        //this checks the app store to see if the user has previous purchases, using the productID
+        SKPaymentQueue.default().restoreCompletedTransactions()
     }
 
 
